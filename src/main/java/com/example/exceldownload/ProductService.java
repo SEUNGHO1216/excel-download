@@ -1,6 +1,7 @@
 package com.example.exceldownload;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -10,8 +11,10 @@ import org.springframework.stereotype.Service;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProductService {
@@ -20,19 +23,21 @@ public class ProductService {
   private final ProductMapper productMapper;
   private final ExcelUtil excelUtil;
 
-  public Map<String, Object> getExcelList(HttpServletRequest request, HttpServletResponse response) throws Exception {
+
+  public void getExcelList(HttpServletRequest request, HttpServletResponse response) throws Exception {
     int page = 0;
     int size = 10000;
-//    Page<ProductDTO> productDTOS = getProductList(PageRequest.of(page, size));
-//
-////    if(productDTOS.getSize() != 0){
-//    Class<ProductDTO> productDTOClass = (Class<ProductDTO>) productDTOS.getContent().get(0).getClass();
-//    Field[] productFields = productDTOClass.getFields();
-//    int columnLength = productFields.length;
-//    List<String> headerKeys = new ArrayList<>();
-//    for (int i = 0; i < columnLength; i++) {
-//      headerKeys.add(productFields[i].getName());
-//    }
+    Page<ProductDTO> productDTOS = getProductList(PageRequest.of(page, size));
+
+//    if(productDTOS.getSize() != 0){
+    Class<ProductDTO> productDTOClass = (Class<ProductDTO>) productDTOS.getContent().get(0).getClass();
+    Field[] productFields = productDTOClass.getFields();
+    int columnLength = productFields.length;
+    List<String> headerKeys = new ArrayList<>();
+    for (int i = 0; i < columnLength; i++) {
+      log.info(productFields[i].getName());
+      headerKeys.add(productFields[i].getName());
+    }
 //    }
 
     // 엑셀에 저장할 row 수
@@ -43,44 +48,52 @@ public class ProductService {
       필드값을 자바 메소드를 활용해서 뽑는 방법은 아래를 참조
       https://roytuts.com/handling-large-data-writing-to-excel-using-sxssf-apache-poi/
      */
-    List<String> headerKeys = List.of("id", "name", "description", "price", "expireDate"); // 이 자체가 헤더 키이자 헤더이다
+//    List<String> headerKeys = List.of("id", "name", "description", "price", "expireDate"); // 이 자체가 헤더 키이자 헤더이다
     // 헤더당 셀 너비 설정
     List<String> widths = Arrays.asList("10", "20", "50", "15", "20");
-//
-//    List<Map<String, Object>> headerKeysMap = new ArrayList<>();
-//    int totalPages = productDTOS.getTotalPages();
-//    for (int i = 0; i < totalPages; i++) {
-//      Page<ProductDTO> pagedExcelData = getProductList(PageRequest.of(i, size));
-//      int rowIndex = i * page;
-//      // 헤더 키에 1:1 매핑, 만개의 리스트 == 만개의 로우
-//      for (ProductDTO excelData : pagedExcelData) {
-//        Map<String, Object> tempMap = new HashMap<>();
-//        for (Field field : productFields){
-//          field.getName()
-//        }
-//          tempMap.put("id", excelData.getId());
+
+    List<Map<String, Object>> headerKeysMap = new ArrayList<>();
+    int totalPages = productDTOS.getTotalPages();
+    for (int i = 0; i < totalPages; i++) {
+      Page<ProductDTO> pagedExcelData = getProductList(PageRequest.of(i, size));
+      int rowIndex = i * page;
+      // 헤더 키에 1:1 매핑, 만개의 리스트 == 만개의 로우
+      for (ProductDTO excelData : pagedExcelData) {
+        Map<String, Object> tempMap = new HashMap<>();
+        for (Field field : productFields) {
+          String fieldName = field.getName();
+          Method method = null; // reflect
+          try {
+            method = productDTOClass.getMethod("get" + ExcelUtil.capitalizeInitialLetter(fieldName));
+            log.info("메소드 이름 >> {}",method.getName());
+          } catch (NoSuchMethodException e) {
+            method = productDTOClass.getMethod("get" + fieldName);
+          }
+          Object value = method.invoke(excelData, (Object[]) null);
+          log.info("value >> {}", value);
+          tempMap.put(fieldName, value);
+        }
+//        tempMap.put("id", excelData.getId());
 //        tempMap.put("name", excelData.getName());
 //        tempMap.put("description", excelData.getDescription());
 //        tempMap.put("price", excelData.getPrice());
 //        tempMap.put("expireDate", excelData.getExpireDate());
-//
-//        headerKeysMap.add(tempMap);
-//      }
-//    }
 
+        headerKeysMap.add(tempMap);
+      }
+      // 파일명 설정
+      String fileName = "EXAMPLE_EXCEL";
 
-    // 파일명 설정
-    String fileName = "EXAMPLE_EXCEL";
-
-    Map<String, Object> excelMap = new HashMap<>();
-    excelMap.put("headerKeys", headerKeys); // 헤더 정보
-    excelMap.put("widths", widths); // 칼럼 너비
-//    excelMap.put("headerKeysMap", headerKeysMap); // 헤더에 따른 정보 매핑(리스트 사이즈만큼 로우 나옴)
-    excelMap.put("fileName", fileName);
-
-    excelUtil.buildExcelDocument(excelMap, request, response);
-    return excelMap;
+      Map<String, Object> excelMap = new HashMap<>();
+      excelMap.put("headerKeys", headerKeys); // 헤더 정보
+      excelMap.put("widths", widths); // 칼럼 너비
+      excelMap.put("headerKeysMap", headerKeysMap); // 헤더에 따른 정보 매핑(리스트 사이즈만큼 로우 나옴)
+      excelMap.put("rowIndex", rowIndex);
+      excelMap.put("fileName", fileName);
+      excelUtil.buildExcelDocument(excelMap, request, response);
+    }
   }
+
 
   public ProductDTO createProduct(ProductDTO productDTO) {
     return Optional.of(Product.create(
