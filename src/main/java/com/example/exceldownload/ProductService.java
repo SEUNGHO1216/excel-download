@@ -24,14 +24,15 @@ public class ProductService {
     int page = 0;
     int size = 10000;
 //    Page<ProductDTO> productDTOS = getProductList(PageRequest.of(page, size));
-//    if(productDTOS.getSize() != 0){
-//      Class<ProductDTO> productDTOClass = (Class<ProductDTO>) productDTOS.getContent().get(0).getClass();
-//      Field[] productFields = productDTOClass.getFields();
-//      int columnLength = productFields.length;
-//      List<String> headerKeys = new ArrayList<>();
-//      for(int i =0 ; i < columnLength ; i++){
-//        headerKeys.add(productFields[i].getName());
-//      }
+//
+////    if(productDTOS.getSize() != 0){
+//    Class<ProductDTO> productDTOClass = (Class<ProductDTO>) productDTOS.getContent().get(0).getClass();
+//    Field[] productFields = productDTOClass.getFields();
+//    int columnLength = productFields.length;
+//    List<String> headerKeys = new ArrayList<>();
+//    for (int i = 0; i < columnLength; i++) {
+//      headerKeys.add(productFields[i].getName());
+//    }
 //    }
 
     // 엑셀에 저장할 row 수
@@ -43,15 +44,21 @@ public class ProductService {
       https://roytuts.com/handling-large-data-writing-to-excel-using-sxssf-apache-poi/
      */
     List<String> headerKeys = List.of("id", "name", "description", "price", "expireDate"); // 이 자체가 헤더 키이자 헤더이다
+    // 헤더당 셀 너비 설정
+    List<String> widths = Arrays.asList("10", "20", "50", "15", "20");
+//
 //    List<Map<String, Object>> headerKeysMap = new ArrayList<>();
 //    int totalPages = productDTOS.getTotalPages();
 //    for (int i = 0; i < totalPages; i++) {
-//      Page<ProductDTO> pagedExcelData = getProductList(PageRequest.of(i, size, Sort.by(Sort.Direction.DESC, "id")));
-//
+//      Page<ProductDTO> pagedExcelData = getProductList(PageRequest.of(i, size));
+//      int rowIndex = i * page;
 //      // 헤더 키에 1:1 매핑, 만개의 리스트 == 만개의 로우
 //      for (ProductDTO excelData : pagedExcelData) {
 //        Map<String, Object> tempMap = new HashMap<>();
-//        tempMap.put("id", excelData.getId());
+//        for (Field field : productFields){
+//          field.getName()
+//        }
+//          tempMap.put("id", excelData.getId());
 //        tempMap.put("name", excelData.getName());
 //        tempMap.put("description", excelData.getDescription());
 //        tempMap.put("price", excelData.getPrice());
@@ -61,14 +68,12 @@ public class ProductService {
 //      }
 //    }
 
-    // 헤더당 셀 너비 설정
-    List<String> widths = Arrays.asList("10", "20", "40", "15", "20");
 
     // 파일명 설정
     String fileName = "EXAMPLE_EXCEL";
 
     Map<String, Object> excelMap = new HashMap<>();
-    excelMap.put("headersKeys", headerKeys); // 헤더 정보
+    excelMap.put("headerKeys", headerKeys); // 헤더 정보
     excelMap.put("widths", widths); // 칼럼 너비
 //    excelMap.put("headerKeysMap", headerKeysMap); // 헤더에 따른 정보 매핑(리스트 사이즈만큼 로우 나옴)
     excelMap.put("fileName", fileName);
@@ -86,7 +91,8 @@ public class ProductService {
       .map(productMapper::toDTO)
       .get();
   }
-  public Page<ProductDTO> getProductList(Pageable pageable){
+
+  public Page<ProductDTO> getProductList(Pageable pageable) {
     return productRepository.findAll(pageable).map(productMapper::toDTO);
   }
 }

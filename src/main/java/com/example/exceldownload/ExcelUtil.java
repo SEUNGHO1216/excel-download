@@ -18,6 +18,7 @@ import org.springframework.web.servlet.view.document.AbstractXlsView;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
@@ -42,7 +43,7 @@ public class ExcelUtil {
   public void buildExcelDocument(Map<String, Object> model,
                                  HttpServletRequest request,
                                  HttpServletResponse response) throws Exception {
-    List<String> headerKeys = (List<String>) model.get("headersKeys");
+    List<String> headerKeys = (List<String>) model.get("headerKeys");
     List<String> widths = (List<String>) model.get("widths");
     String filename = (String) model.get("fileName");
 
@@ -58,8 +59,11 @@ public class ExcelUtil {
 
     SXSSFWorkbook sxssfWorkbook = null;
     Pageable pageable = PageRequest.of(0, PAGE_SIZE);
+    log.info("page size > {}", pageable.getPageSize());
     Page<ProductDTO> productDTOS = this.getProductList(pageable);
     int totalPages = productDTOS.getTotalPages();
+    log.info("totalPages >> {}", totalPages);
+
     try {
       for (int i = 0; i < totalPages; i++) {
         // 헤더에 의해서 이 부분이 어떻게 바뀔지는 보류
@@ -83,8 +87,8 @@ public class ExcelUtil {
         sxssfWorkbook = getWorkBook(headerKeys, widths, headerKeysMap, rowIndex, sxssfWorkbook);
         headerKeysMap.clear(); //초기화
       }
-
       filename = filename+System.currentTimeMillis();
+      log.info("filename >> {}", filename);
       response.setContentType("application/vnd.ms-excel");
       response.setHeader("Content-Disposition", "attachment;filename=" + filename + ".xlsx");
       ServletOutputStream outputStream = response.getOutputStream();
@@ -97,11 +101,10 @@ public class ExcelUtil {
     } finally {
       if (!ObjectUtils.isEmpty(sxssfWorkbook)) {
         log.info("sxssfWorkBook check (true/false) >> {}", ObjectUtils.isEmpty(sxssfWorkbook));
-        sxssfWorkbook.close();
         sxssfWorkbook.dispose();
+        sxssfWorkbook.close();
       }
     }
-
   }
 
   private SXSSFWorkbook getWorkBook(List<String> headerKeys,
