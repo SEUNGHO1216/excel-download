@@ -43,9 +43,54 @@ public class ExcelUtil {
   public void buildExcelDocument(Map<String, Object> model,
                                  HttpServletRequest request,
                                  HttpServletResponse response) throws Exception {
+    long start = System.currentTimeMillis();
     List<String> headerKeys = (List<String>) model.get("headerKeys");
     List<String> widths = (List<String>) model.get("widths");
     String filename = (String) model.get("fileName");
+
+
+    SXSSFWorkbook sxssfWorkbook = null;
+    Pageable pageable = PageRequest.of(0, PAGE_SIZE);
+    log.info("page size > {}", pageable.getPageSize());
+    Page<ProductDTO> productDTOS = this.getProductList(pageable);
+    int totalPages = productDTOS.getTotalPages();
+    log.info("totalPages >> {}", totalPages);
+
+    for (int i = 0; i < totalPages; i++) {
+      // 헤더에 의해서 이 부분이 어떻게 바뀔지는 보류
+      int rowIndex = i * PAGE_SIZE;
+      Pageable pageable2 = PageRequest.of(i, PAGE_SIZE);
+      Page<ProductDTO> excelDataList = this.getProductList(pageable2);
+      log.info("페이징 된 사이즈 >> {}", excelDataList.getContent().size());
+      // 헤더 키에 1:1 매핑, 만개의 리스트 == 만개의 로우
+      List<Map<String, Object>> headerKeysMap = new ArrayList<>();
+
+      for (ProductDTO excelData : excelDataList) {
+        Map<String, Object> tempMap = new HashMap<>();
+        tempMap.put("id", excelData.getId());
+        tempMap.put("name", excelData.getName());
+        tempMap.put("description", excelData.getDescription());
+        tempMap.put("price", excelData.getPrice());
+        tempMap.put("expireDate", excelData.getExpireDate());
+
+        headerKeysMap.add(tempMap);
+      }
+      sxssfWorkbook = getWorkBook(headerKeys, widths, headerKeysMap, rowIndex, sxssfWorkbook);
+      headerKeysMap.clear(); //초기화
+    }
+
+    writeSXSSFWorkbook(sxssfWorkbook, filename, request, response);
+
+    long end = System.currentTimeMillis();
+    long gap = end - start;
+    log.info("소요시간 >>{} ms", gap);
+
+  }
+
+  public void writeSXSSFWorkbook(SXSSFWorkbook sxssfWorkbook,
+                                 String filename,
+                                 HttpServletRequest request,
+                                 HttpServletResponse response) throws IOException {
 
     String userAgent = request.getHeader("User-Agent");
     log.info("user agent >> {}", userAgent);
@@ -56,38 +101,8 @@ public class ExcelUtil {
       || userAgent.contains("Firefox")) {
       filename = new String(filename.getBytes("UTF-8"), "ISO-8859-1");
     }
-
-    SXSSFWorkbook sxssfWorkbook = null;
-    Pageable pageable = PageRequest.of(0, PAGE_SIZE);
-    log.info("page size > {}", pageable.getPageSize());
-    Page<ProductDTO> productDTOS = this.getProductList(pageable);
-    int totalPages = productDTOS.getTotalPages();
-    log.info("totalPages >> {}", totalPages);
-
     try {
-      for (int i = 0; i < totalPages; i++) {
-        // 헤더에 의해서 이 부분이 어떻게 바뀔지는 보류
-        int rowIndex = i * PAGE_SIZE;
-        Pageable pageable2 = PageRequest.of(i, PAGE_SIZE);
-        Page<ProductDTO> excelDataList = this.getProductList(pageable2);
-        log.info("페이징 된 사이즈 >> {}", excelDataList.getContent().size());
-        // 헤더 키에 1:1 매핑, 만개의 리스트 == 만개의 로우
-        List<Map<String, Object>> headerKeysMap = new ArrayList<>();
-
-        for (ProductDTO excelData : excelDataList) {
-          Map<String, Object> tempMap = new HashMap<>();
-          tempMap.put("id", excelData.getId());
-          tempMap.put("name", excelData.getName());
-          tempMap.put("description", excelData.getDescription());
-          tempMap.put("price", excelData.getPrice());
-          tempMap.put("expireDate", excelData.getExpireDate());
-
-          headerKeysMap.add(tempMap);
-        }
-        sxssfWorkbook = getWorkBook(headerKeys, widths, headerKeysMap, rowIndex, sxssfWorkbook);
-        headerKeysMap.clear(); //초기화
-      }
-      filename = filename+System.currentTimeMillis();
+      filename = filename + System.currentTimeMillis();
       log.info("filename >> {}", filename);
       response.setContentType("application/vnd.ms-excel");
       response.setHeader("Content-Disposition", "attachment;filename=" + filename + ".xlsx");
@@ -176,7 +191,7 @@ public class ExcelUtil {
           cell.setCellValue(((Long) value).toString());
         } else if (value instanceof Integer) {
           cell.setCellValue(((Integer) value).toString());
-        } else if (value instanceof LocalDateTime){
+        } else if (value instanceof LocalDateTime) {
           String date = ((LocalDateTime) value).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
           cell.setCellValue(date);
         } else {
