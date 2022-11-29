@@ -1,5 +1,7 @@
 package com.example.exceldownload;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -24,10 +26,7 @@ import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 @Component
@@ -36,48 +35,57 @@ public class ExcelUtil {
 
   private static final int MAX_ROW = 1_040_000;
   private static final int PAGE_SIZE = 10_000;
+  private final ObjectMapper objectMapper;
 
-  private final ProductRepository productRepository;
-  private final ProductMapper productMapper;
+//  public SXSSFWorkbook buildExcelDocument(Map<String, Object> model,
+//                                 SXSSFWorkbook sxssfWorkbook,
+//                                 HttpServletRequest request,
+//                                 HttpServletResponse response) throws Exception {
+//    List<String> headerKeys = (List<String>) model.get("headerKeys");
+//    List<String> widths = (List<String>) model.get("widths");
+//    int rowIndex = (int) model.get("rowIndex");
+//    List<Map<String, Object>> headerKeysMap = (List<Map<String, Object>>) model.get("headerKeysMap");
+////    List<String> excelData = (List<String>) model.get("excelData");
+//
+////    SXSSFWorkbook sxssfWorkbook = null;
+////    Pageable pageable = PageRequest.of(0, PAGE_SIZE);
+////    log.info("page size > {}", pageable.getPageSize());
+////    Page<ProductDTO> productDTOS = this.getProductList(pageable);
+////    int totalPages = productDTOS.getTotalPages();
+////    log.info("totalPages >> {}", totalPages);
+//
+////    for (int i = 0; i < totalPages; i++) {
+////      // 헤더에 의해서 이 부분이 어떻게 바뀔지는 보류
+////      int rowIndex = i * PAGE_SIZE;
+////      Pageable pageable2 = PageRequest.of(i, PAGE_SIZE);
+////      Page<ProductDTO> excelDataList = this.getProductList(pageable2);
+////      log.info("페이징 된 사이즈 >> {}", excelDataList.getContent().size());
+////      // 헤더 키에 1:1 매핑, 만개의 리스트 == 만개의 로우
+////      List<Map<String, Object>> headerKeysMap = new ArrayList<>();
+////
+////      for (ProductDTO excelData : excelDataList) {
+////        Map<String, Object> tempMap = new HashMap<>();
+////        tempMap.put("id", excelData.getId());
+////        tempMap.put("name", excelData.getName());
+////        tempMap.put("description", excelData.getDescription());
+////        tempMap.put("price", excelData.getPrice());
+////        tempMap.put("expireDate", excelData.getExpireDate());
+////
+////        headerKeysMap.add(tempMap);
+////      }
+////      sxssfWorkbook = getWorkBook(headerKeys, widths, headerKeysMap, rowIndex, sxssfWorkbook);
+////      headerKeysMap.clear(); //초기화
+////    }
+//    return getWorkBook(headerKeys, widths, headerKeysMap, rowIndex, sxssfWorkbook);
+//  }
 
   public SXSSFWorkbook buildExcelDocument(Map<String, Object> model,
-                                 SXSSFWorkbook sxssfWorkbook,
-                                 HttpServletRequest request,
-                                 HttpServletResponse response) throws Exception {
+                                          SXSSFWorkbook sxssfWorkbook) throws Exception {
     List<String> headerKeys = (List<String>) model.get("headerKeys");
     List<String> widths = (List<String>) model.get("widths");
     int rowIndex = (int) model.get("rowIndex");
     List<Map<String, Object>> headerKeysMap = (List<Map<String, Object>>) model.get("headerKeysMap");
 
-//    SXSSFWorkbook sxssfWorkbook = null;
-//    Pageable pageable = PageRequest.of(0, PAGE_SIZE);
-//    log.info("page size > {}", pageable.getPageSize());
-//    Page<ProductDTO> productDTOS = this.getProductList(pageable);
-//    int totalPages = productDTOS.getTotalPages();
-//    log.info("totalPages >> {}", totalPages);
-
-//    for (int i = 0; i < totalPages; i++) {
-//      // 헤더에 의해서 이 부분이 어떻게 바뀔지는 보류
-//      int rowIndex = i * PAGE_SIZE;
-//      Pageable pageable2 = PageRequest.of(i, PAGE_SIZE);
-//      Page<ProductDTO> excelDataList = this.getProductList(pageable2);
-//      log.info("페이징 된 사이즈 >> {}", excelDataList.getContent().size());
-//      // 헤더 키에 1:1 매핑, 만개의 리스트 == 만개의 로우
-//      List<Map<String, Object>> headerKeysMap = new ArrayList<>();
-//
-//      for (ProductDTO excelData : excelDataList) {
-//        Map<String, Object> tempMap = new HashMap<>();
-//        tempMap.put("id", excelData.getId());
-//        tempMap.put("name", excelData.getName());
-//        tempMap.put("description", excelData.getDescription());
-//        tempMap.put("price", excelData.getPrice());
-//        tempMap.put("expireDate", excelData.getExpireDate());
-//
-//        headerKeysMap.add(tempMap);
-//      }
-//      sxssfWorkbook = getWorkBook(headerKeys, widths, headerKeysMap, rowIndex, sxssfWorkbook);
-//      headerKeysMap.clear(); //초기화
-//    }
     return getWorkBook(headerKeys, widths, headerKeysMap, rowIndex, sxssfWorkbook);
   }
 
@@ -118,7 +126,90 @@ public class ExcelUtil {
     }
   }
 
-  private SXSSFWorkbook getWorkBook(List<String> headerKeys,
+//  private SXSSFWorkbook getWorkBook(List<String> headerKeys,
+//                                    List<String> widths,
+//                                    List<Map<String, Object>> headerKeysMap,
+//                                    int rowIndex,
+//                                    SXSSFWorkbook sxssfWorkbook) throws IOException {
+//    log.info("get workbook >> {}", sxssfWorkbook);
+//    SXSSFWorkbook workbook = ObjectUtils.isEmpty(sxssfWorkbook)
+//      ? new SXSSFWorkbook(-1) : sxssfWorkbook;
+//
+//    String sheetName = "Sheet" + (rowIndex / MAX_ROW + 1);
+//    log.info("rowIndx >> {}", rowIndex);
+//    boolean isNewSheet = ObjectUtils.isEmpty(workbook.getSheet(sheetName));
+//    log.info("isNewSheet >> {}", isNewSheet);
+//    Sheet sheet = isNewSheet ? workbook.createSheet(sheetName) : workbook.getSheet(sheetName);
+//
+//    CellStyle headerStyle = createHeaderStyle(workbook);
+//    CellStyle bodyStyleLeft = createBodyStyle(workbook, "LEFT");
+//    CellStyle bodyStyleRight = createBodyStyle(workbook, "RIGHT");
+//    CellStyle bodyStyleCenter = createBodyStyle(workbook, "CENTER");
+//
+//    // \r\n을 통해 셀 내 개행
+//    // 개행을 위해 setWrapText 설정
+//    bodyStyleLeft.setWrapText(true);
+//    bodyStyleRight.setWrapText(true);
+//    bodyStyleCenter.setWrapText(true);
+//
+//    int columnIndex = 0;
+//
+//    for (String width : widths) {
+//      sheet.setColumnWidth(columnIndex++, Integer.parseInt(width) * 256); // 왜 256 곱하지?
+//    }
+//
+//    Row row = null;
+//    Cell cell = null;
+//
+//    // 매개변수로 받은 rowIdx % MAX_ROW 행부터 이어서 데이터
+//    int rowNo = rowIndex % MAX_ROW;
+//
+//    if (isNewSheet) {
+//      //새로운 시트면 항상 헤더를 새로 만들어줘야 할 것임
+//      //rowNo은 0부터 시작
+//      row = sheet.createRow(rowNo);
+//      columnIndex = 0;
+//
+//      for (String header : headerKeys) {
+//        cell = row.createCell(columnIndex++);
+//        cell.setCellStyle(headerStyle);
+//        log.info(header);
+//        cell.setCellValue(header);
+//      }
+//    }
+//    for (Map<String, Object> dataMap : headerKeysMap) {
+//      columnIndex = 0;
+//      row = sheet.createRow(++rowNo);
+//
+//      for (String headerKey : headerKeys) {
+//        cell = row.createCell(columnIndex++);
+//        Object value = dataMap.get(headerKey);
+//
+//        // 숫자 정밀도 보장
+//        if (value instanceof BigDecimal) {
+//          cell.setCellValue(((BigDecimal) value).toString());
+//        } else if (value instanceof Double) {
+//          cell.setCellValue(((Double) value).toString());
+//        } else if (value instanceof Long) {
+//          cell.setCellValue(((Long) value).toString());
+//        } else if (value instanceof Integer) {
+//          cell.setCellValue(((Integer) value).toString());
+//        } else if (value instanceof LocalDateTime) {
+//          String date = ((LocalDateTime) value).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+//          cell.setCellValue(date);
+//        } else {
+//          cell.setCellValue((String) value);
+//        }
+//      }
+//      // 주기적 flush
+//      if (rowNo % 100 == 0) {
+//        ((SXSSFSheet) sheet).flushRows(100);
+//      }
+//    }
+//    return workbook;
+//  }
+
+  public SXSSFWorkbook getWorkBook(List<String> headerKeys,
                                     List<String> widths,
                                     List<Map<String, Object>> headerKeysMap,
                                     int rowIndex,
@@ -127,7 +218,7 @@ public class ExcelUtil {
     SXSSFWorkbook workbook = ObjectUtils.isEmpty(sxssfWorkbook)
       ? new SXSSFWorkbook(-1) : sxssfWorkbook;
 
-    String sheetName = "Sheet" + (rowIndex / MAX_ROW + 1);
+    String sheetName = "TestSheet" + (rowIndex / MAX_ROW + 1);
     log.info("rowIndx >> {}", rowIndex);
     boolean isNewSheet = ObjectUtils.isEmpty(workbook.getSheet(sheetName));
     log.info("isNewSheet >> {}", isNewSheet);
@@ -163,6 +254,7 @@ public class ExcelUtil {
       columnIndex = 0;
 
       for (String header : headerKeys) {
+        log.info("헤더 >> {}", header);
         cell = row.createCell(columnIndex++);
         cell.setCellStyle(headerStyle);
         log.info(header);
@@ -201,6 +293,16 @@ public class ExcelUtil {
     return workbook;
   }
 
+  public List<String> getKeys(Map<String, Object> dataMap, List<String> keys){
+    dataMap.forEach((key,value)->{
+      if(value instanceof LinkedHashMap){
+        Map<String, Object> map = (LinkedHashMap) value;
+        getKeys(map, keys);
+      }
+      keys.add(key);
+    });
+    return keys;
+  }
   // capitalize the first letter of the field name for retrieving value of the
   // field later
   public static String capitalizeInitialLetter(String s) {
