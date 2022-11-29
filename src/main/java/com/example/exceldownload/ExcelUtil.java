@@ -40,51 +40,45 @@ public class ExcelUtil {
   private final ProductRepository productRepository;
   private final ProductMapper productMapper;
 
-  public void buildExcelDocument(Map<String, Object> model,
+  public SXSSFWorkbook buildExcelDocument(Map<String, Object> model,
+                                 SXSSFWorkbook sxssfWorkbook,
                                  HttpServletRequest request,
                                  HttpServletResponse response) throws Exception {
-    long start = System.currentTimeMillis();
     List<String> headerKeys = (List<String>) model.get("headerKeys");
     List<String> widths = (List<String>) model.get("widths");
-    String filename = (String) model.get("fileName");
+    int rowIndex = (int) model.get("rowIndex");
+    List<Map<String, Object>> headerKeysMap = (List<Map<String, Object>>) model.get("headerKeysMap");
 
+//    SXSSFWorkbook sxssfWorkbook = null;
+//    Pageable pageable = PageRequest.of(0, PAGE_SIZE);
+//    log.info("page size > {}", pageable.getPageSize());
+//    Page<ProductDTO> productDTOS = this.getProductList(pageable);
+//    int totalPages = productDTOS.getTotalPages();
+//    log.info("totalPages >> {}", totalPages);
 
-    SXSSFWorkbook sxssfWorkbook = null;
-    Pageable pageable = PageRequest.of(0, PAGE_SIZE);
-    log.info("page size > {}", pageable.getPageSize());
-    Page<ProductDTO> productDTOS = this.getProductList(pageable);
-    int totalPages = productDTOS.getTotalPages();
-    log.info("totalPages >> {}", totalPages);
-
-    for (int i = 0; i < totalPages; i++) {
-      // 헤더에 의해서 이 부분이 어떻게 바뀔지는 보류
-      int rowIndex = i * PAGE_SIZE;
-      Pageable pageable2 = PageRequest.of(i, PAGE_SIZE);
-      Page<ProductDTO> excelDataList = this.getProductList(pageable2);
-      log.info("페이징 된 사이즈 >> {}", excelDataList.getContent().size());
-      // 헤더 키에 1:1 매핑, 만개의 리스트 == 만개의 로우
-      List<Map<String, Object>> headerKeysMap = new ArrayList<>();
-
-      for (ProductDTO excelData : excelDataList) {
-        Map<String, Object> tempMap = new HashMap<>();
-        tempMap.put("id", excelData.getId());
-        tempMap.put("name", excelData.getName());
-        tempMap.put("description", excelData.getDescription());
-        tempMap.put("price", excelData.getPrice());
-        tempMap.put("expireDate", excelData.getExpireDate());
-
-        headerKeysMap.add(tempMap);
-      }
-      sxssfWorkbook = getWorkBook(headerKeys, widths, headerKeysMap, rowIndex, sxssfWorkbook);
-      headerKeysMap.clear(); //초기화
-    }
-
-    writeSXSSFWorkbook(sxssfWorkbook, filename, request, response);
-
-    long end = System.currentTimeMillis();
-    long gap = end - start;
-    log.info("소요시간 >>{} ms", gap);
-
+//    for (int i = 0; i < totalPages; i++) {
+//      // 헤더에 의해서 이 부분이 어떻게 바뀔지는 보류
+//      int rowIndex = i * PAGE_SIZE;
+//      Pageable pageable2 = PageRequest.of(i, PAGE_SIZE);
+//      Page<ProductDTO> excelDataList = this.getProductList(pageable2);
+//      log.info("페이징 된 사이즈 >> {}", excelDataList.getContent().size());
+//      // 헤더 키에 1:1 매핑, 만개의 리스트 == 만개의 로우
+//      List<Map<String, Object>> headerKeysMap = new ArrayList<>();
+//
+//      for (ProductDTO excelData : excelDataList) {
+//        Map<String, Object> tempMap = new HashMap<>();
+//        tempMap.put("id", excelData.getId());
+//        tempMap.put("name", excelData.getName());
+//        tempMap.put("description", excelData.getDescription());
+//        tempMap.put("price", excelData.getPrice());
+//        tempMap.put("expireDate", excelData.getExpireDate());
+//
+//        headerKeysMap.add(tempMap);
+//      }
+//      sxssfWorkbook = getWorkBook(headerKeys, widths, headerKeysMap, rowIndex, sxssfWorkbook);
+//      headerKeysMap.clear(); //초기화
+//    }
+    return getWorkBook(headerKeys, widths, headerKeysMap, rowIndex, sxssfWorkbook);
   }
 
   public void writeSXSSFWorkbook(SXSSFWorkbook sxssfWorkbook,
@@ -92,6 +86,7 @@ public class ExcelUtil {
                                  HttpServletRequest request,
                                  HttpServletResponse response) throws IOException {
 
+    // 브라우저별 인코딩
     String userAgent = request.getHeader("User-Agent");
     log.info("user agent >> {}", userAgent);
     if (userAgent.contains("Trident") || (userAgent.indexOf("MSIE") > -1)) {
@@ -101,6 +96,7 @@ public class ExcelUtil {
       || userAgent.contains("Firefox")) {
       filename = new String(filename.getBytes("UTF-8"), "ISO-8859-1");
     }
+    // output stream 을 열어서 엑셀 파일로 변환
     try {
       filename = filename + System.currentTimeMillis();
       log.info("filename >> {}", filename);
@@ -168,7 +164,6 @@ public class ExcelUtil {
 
       for (String header : headerKeys) {
         cell = row.createCell(columnIndex++);
-
         cell.setCellStyle(headerStyle);
         log.info(header);
         cell.setCellValue(header);
@@ -204,11 +199,6 @@ public class ExcelUtil {
       }
     }
     return workbook;
-  }
-
-  public Page<ProductDTO> getProductList(Pageable pageable) {
-    // 엑셀에 저장할 데이터
-    return productRepository.findAll(pageable).map(productMapper::toDTO);
   }
 
   // capitalize the first letter of the field name for retrieving value of the
