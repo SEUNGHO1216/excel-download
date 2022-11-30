@@ -24,7 +24,7 @@ public class ExcelHandler {
     return sxssfWorkbook;
   }
 
-  public void excelDownload(List<String> headerKeys,
+  public synchronized void excelDownload(List<String> headerKeys,
                             List<String> widths,
                             List<Map<String, Object>> headerKeysMap,
                             int rowIndx,

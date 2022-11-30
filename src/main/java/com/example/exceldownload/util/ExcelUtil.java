@@ -1,26 +1,15 @@
 package com.example.exceldownload.util;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.poi.hssf.util.HSSFColor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
-import org.springframework.web.servlet.view.document.AbstractXlsView;
-
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
@@ -50,11 +39,6 @@ public class ExcelUtil {
     log.info("isNewSheet >> {}", isNewSheet);
     Sheet sheet = isNewSheet ? workbook.createSheet(sheetName) : workbook.getSheet(sheetName);
 
-    CellStyle headerStyle = _createHeaderStyle(workbook);
-    CellStyle bodyStyleLeft = _createBodyStyle(workbook, "LEFT");
-    CellStyle bodyStyleRight = _createBodyStyle(workbook, "RIGHT");
-    CellStyle bodyStyleCenter = _createBodyStyle(workbook, "CENTER");
-
     int columnIndex = 0;
 
     for (String width : widths) {
@@ -63,6 +47,7 @@ public class ExcelUtil {
 
     Row row = null;
     Cell cell = null;
+    CellStyle cellStyle = workbook.createCellStyle();
 
     // 매개변수로 받은 rowIndex % MAX_ROW 행부터 이어서 데이터 입력
     int rowNo = rowIndex % MAX_ROW;
@@ -76,8 +61,9 @@ public class ExcelUtil {
         log.info("헤더 >> {}", header);
         cell = row.createCell(columnIndex++);
         cell.setCellValue(header);
-        cell.setCellStyle(headerStyle);
+        cell.setCellStyle(ExcelStyle.HEADER_STYLE.getHeaderCellStyle(cellStyle));
       }
+      cellStyle = workbook.createCellStyle();
     }
     // body cell 입력
     for (Map<String, Object> excelValueMap : headerKeysMap) {
@@ -87,7 +73,7 @@ public class ExcelUtil {
       for (String headerKey : headerKeys) {
         cell = row.createCell(columnIndex++);
         Object value = excelValueMap.get(headerKey);
-        _cellWrite(cell, value, bodyStyleCenter);
+        _cellWrite(cell, value, cellStyle);
       }
       // 주기적 flush
       if (rowNo % 100 == 0) {
@@ -133,66 +119,24 @@ public class ExcelUtil {
     }
   }
 
-  private CellStyle _createHeaderStyle(Workbook workbook) {
-    CellStyle headerStyle = _createBodyStyle(workbook, "CENTER");
-    // 취향에 따라 설정 가능
-    headerStyle.setFillForegroundColor(HSSFColor.HSSFColorPredefined.LIGHT_YELLOW.getIndex());
-    headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-
-    // 가로 세로 정렬 기준
-    headerStyle.setAlignment(HorizontalAlignment.CENTER);
-    headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-
-    return headerStyle;
-  }
-
-  private CellStyle _createBodyStyle(Workbook workbook, String align) {
-    align = "CENTER";
-    CellStyle bodyStyle = workbook.createCellStyle();
-    // 취향에 따라 설정 가능
-    bodyStyle.setBorderTop(BorderStyle.THIN);
-    bodyStyle.setBorderBottom(BorderStyle.THIN);
-    bodyStyle.setBorderLeft(BorderStyle.THIN);
-    bodyStyle.setBorderRight(BorderStyle.THIN);
-    bodyStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-
-    if (!StringUtils.isEmpty(align)) {
-      if ("LEFT".equals(align)) {
-        bodyStyle.setAlignment(HorizontalAlignment.LEFT);
-      } else if ("RIGHT".equals(align)) {
-        bodyStyle.setAlignment(HorizontalAlignment.RIGHT);
-      } else {
-        bodyStyle.setAlignment(HorizontalAlignment.CENTER);
-      }
-    }
-    // \r\n을 통해 셀 내 개행, 개행을 위해 setWrapText 설정
-    bodyStyle.setWrapText(true);
-    return bodyStyle;
-  }
-
   private Cell _cellWrite(Cell cell, Object value, CellStyle cellStyle){
-    ExcelStyle.BODY_STYLE.getCellStyle()
+    cell.setCellStyle(ExcelStyle.BODY_STYLE.getBodyCellStyle(cellStyle));
     // 숫자 정밀도 보장
     if (value instanceof BigDecimal) {
       cell.setCellValue(((BigDecimal) value).toString());
-      cell.setCellStyle(cellStyle);
     } else if (value instanceof Double) {
       cell.setCellValue(((Double) value).toString());
-      cell.setCellStyle(cellStyle);
     } else if (value instanceof Long) {
       cell.setCellValue(((Long) value).toString());
-      cell.setCellStyle(cellStyle);
     } else if (value instanceof Integer) {
       cell.setCellValue(((Integer) value).toString());
-      cell.setCellStyle(cellStyle);
     } else if (value instanceof LocalDateTime) {
       String date = ((LocalDateTime) value).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
       cell.setCellValue(date);
-      cell.setCellStyle(cellStyle);
     } else {
       cell.setCellValue((String) value);
-      cell.setCellStyle(cellStyle);
     }
+
     return cell;
   }
 

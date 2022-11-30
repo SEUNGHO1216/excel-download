@@ -1,5 +1,16 @@
-
-
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://ben.c6wukdjxvf6m.ap-northeast-2.rds.amazonaws.com:3306/bendb
+    username: seungho1216
+    password: Qortmd0102!
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        show_sql: true
+        format_sql: true
 #server:
 #  tomcat:
 #    connection-timeout: 1800000
