@@ -1,4 +1,4 @@
-package com.example.exceldownload;
+package com.example.exceldownload.entity;
 
 import lombok.*;
 

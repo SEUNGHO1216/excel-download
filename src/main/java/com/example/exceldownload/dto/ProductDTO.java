@@ -1,4 +1,4 @@
-package com.example.exceldownload;
+package com.example.exceldownload.dto;
 
 import lombok.Data;
 

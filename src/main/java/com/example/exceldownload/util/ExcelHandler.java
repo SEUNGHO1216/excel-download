@@ -1,4 +1,4 @@
-package com.example.exceldownload;
+package com.example.exceldownload.util;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,12 +15,12 @@ import java.util.Map;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ExcelHandler<T extends Object> {
+public class ExcelHandler {
 
   private static SXSSFWorkbook sxssfWorkbook = new SXSSFWorkbook();
   private final ExcelUtil excelUtil;
 
-  private SXSSFWorkbook makeSXSSFWorkbook(){
+  public SXSSFWorkbook makeSXSSFWorkbook(){
     return sxssfWorkbook;
   }
 
@@ -51,5 +51,4 @@ public class ExcelHandler<T extends Object> {
     });
     return keys;
   }
-
 }

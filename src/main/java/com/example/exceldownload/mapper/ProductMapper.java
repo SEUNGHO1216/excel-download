@@ -1,5 +1,7 @@
-package com.example.exceldownload;
+package com.example.exceldownload.mapper;
 
+import com.example.exceldownload.dto.ProductDTO;
+import com.example.exceldownload.entity.Product;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
