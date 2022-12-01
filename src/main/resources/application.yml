@@ -1,5 +1,0 @@
-
-
-#server:
-#  tomcat:
-#    connection-timeout: 1800000
