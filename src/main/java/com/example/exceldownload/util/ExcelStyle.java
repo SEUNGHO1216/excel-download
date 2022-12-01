@@ -17,9 +17,8 @@ public enum ExcelStyle {
     this.cellStyle = cellStyle;
   }
 
-  public CellStyle getHeaderCellStyle(CellStyle cellStyle) {
-    String align = "CENTER";
-    CellStyle headerStyle = getBodyCellStyle(cellStyle);
+  public CellStyle getHeaderCellStyle(SXSSFWorkbook workbook) {
+    CellStyle headerStyle = getBodyCellStyle(workbook);
 
     // 취향에 따라 설정 가능
     headerStyle.setFillForegroundColor(HSSFColor.HSSFColorPredefined.LIGHT_YELLOW.getIndex());
@@ -32,8 +31,10 @@ public enum ExcelStyle {
     return headerStyle;
   }
 
-  public CellStyle getBodyCellStyle(CellStyle bodyStyle) {
+  public CellStyle getBodyCellStyle(SXSSFWorkbook workbook) {
     String align = "CENTER";
+
+    CellStyle bodyStyle = workbook.createCellStyle();
 
     // 취향에 따라 설정 가능
     bodyStyle.setBorderTop(BorderStyle.THIN);

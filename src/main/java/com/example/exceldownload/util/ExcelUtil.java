@@ -2,11 +2,14 @@ package com.example.exceldownload.util;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.poi.hssf.util.HSSFColor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
+
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -45,9 +48,11 @@ public class ExcelUtil {
       sheet.setColumnWidth(columnIndex++, Integer.parseInt(width) * 256); // 왜 256 곱하지?
     }
 
+    CellStyle headerStyle = ExcelStyle.HEADER_STYLE.getHeaderCellStyle(workbook);
+    CellStyle bodyStyle = ExcelStyle.BODY_STYLE.getBodyCellStyle(workbook);
+
     Row row = null;
     Cell cell = null;
-    CellStyle cellStyle = workbook.createCellStyle();
 
     // 매개변수로 받은 rowIndex % MAX_ROW 행부터 이어서 데이터 입력
     int rowNo = rowIndex % MAX_ROW;
@@ -61,9 +66,9 @@ public class ExcelUtil {
         log.info("헤더 >> {}", header);
         cell = row.createCell(columnIndex++);
         cell.setCellValue(header);
-        cell.setCellStyle(ExcelStyle.HEADER_STYLE.getHeaderCellStyle(cellStyle));
+//        cell.setCellStyle(ExcelStyle.HEADER_STYLE.getHeaderCellStyle(cellStyle));
+        cell.setCellStyle(headerStyle);
       }
-      cellStyle = workbook.createCellStyle();
     }
     // body cell 입력
     for (Map<String, Object> excelValueMap : headerKeysMap) {
@@ -73,7 +78,7 @@ public class ExcelUtil {
       for (String headerKey : headerKeys) {
         cell = row.createCell(columnIndex++);
         Object value = excelValueMap.get(headerKey);
-        _cellWrite(cell, value, cellStyle);
+        _cellWrite(cell, value, bodyStyle);
       }
       // 주기적 flush
       if (rowNo % 100 == 0) {
@@ -82,6 +87,7 @@ public class ExcelUtil {
     }
     return workbook;
   }
+
   public void writeSXSSFWorkbook(SXSSFWorkbook sxssfWorkbook,
                                  String filename,
                                  HttpServletRequest request,
@@ -119,8 +125,8 @@ public class ExcelUtil {
     }
   }
 
-  private Cell _cellWrite(Cell cell, Object value, CellStyle cellStyle){
-    cell.setCellStyle(ExcelStyle.BODY_STYLE.getBodyCellStyle(cellStyle));
+  private Cell _cellWrite(Cell cell, Object value, CellStyle bodyStyle) {
+    cell.setCellStyle(bodyStyle);
     // 숫자 정밀도 보장
     if (value instanceof BigDecimal) {
       cell.setCellValue(((BigDecimal) value).toString());
@@ -131,7 +137,7 @@ public class ExcelUtil {
     } else if (value instanceof Integer) {
       cell.setCellValue(((Integer) value).toString());
     } else if (value instanceof LocalDateTime) {
-      String date = ((LocalDateTime) value).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+      String date = ((LocalDateTime) value).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
       cell.setCellValue(date);
     } else {
       cell.setCellValue((String) value);
@@ -139,5 +145,4 @@ public class ExcelUtil {
 
     return cell;
   }
-
 }

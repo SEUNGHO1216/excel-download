@@ -25,10 +25,11 @@ public class ProductService {
 
   private final ProductRepository productRepository;
   private final ProductMapper productMapper;
-  private final ExcelHandler excelHandler;
   private final ObjectMapper objectMapper;
 
   public void getExcelList(HttpServletRequest request, HttpServletResponse response) throws Exception {
+
+    ExcelHandler excelHandler = new ExcelHandler();
     long start = System.currentTimeMillis();
     int page = 0;
     final int size = 10000;
@@ -46,6 +47,7 @@ public class ProductService {
       for(ProductDTO excelData : pagedExcelData){
         // excelData 객체를 objectMapper 를 통해 key-value map 으로 전환
         headerKeysMap.add(objectMapper.convertValue(excelData, Map.class));
+
       }
       // map 에서 key 값을 헤더로 사용
       List<String> headerKeys = new ArrayList<>();
